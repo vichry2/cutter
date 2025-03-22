@@ -1,7 +1,7 @@
+from py_data import create_random_tables, create_table_between
 import pytest
 import pandas as pd
 from datetime import datetime
-from py_data import create_table_between
 
 
 @pytest.mark.parametrize(
@@ -26,3 +26,32 @@ def test_create_table_between(start, end, freq, columns):
 
     expected_columns = [f"Column {i+1}" for i in range(columns)]
     assert list(df.columns) == expected_columns, f"Expected columns {expected_columns}, but got {list(df.columns)}"
+
+@pytest.mark.parametrize(
+    "num_tables, start, end",
+    [
+        (3, datetime(2022, 1, 1), datetime(2022, 1, 5)),
+        (1, datetime(2022, 2, 1), datetime(2022, 2, 10)),
+        (5, datetime(2023, 3, 1), datetime(2023, 6, 15)),
+    ]
+)
+def test_create_random_tables(num_tables, start, end):
+    tables = create_random_tables(num_tables, start, end)
+
+    assert len(tables) == num_tables, f"Expected {num_tables} tables, got {len(tables)}"
+
+    for name, df in tables.items():
+        assert name.startswith("Table "), f"Table name '{name}' is not formatted correctly."
+        
+        assert isinstance(df, pd.DataFrame), f"{name} is not a pandas DataFrame."
+        
+        assert len(df.columns) > 0, f"{name} has no columns."
+        
+        assert isinstance(df.index, pd.DatetimeIndex), f"{name} does not have a DateTime index."
+        
+        assert not df.empty, f"{name} is empty."
+
+def test_empty_table_case():
+    tables = create_random_tables(0, datetime(2022, 1, 1), datetime(2022, 1, 5))
+ 
+    assert tables == {}, "Expected an empty dictionary for 0 tables."
