@@ -1,5 +1,6 @@
 from py_data import create_random_tables, create_table_between
 import pytest
+import pyarrow as pa
 import pandas as pd
 from datetime import datetime
 
@@ -14,18 +15,20 @@ from datetime import datetime
     ]
 )
 def test_create_table_between(start, end, freq, columns):
+    table = create_table_between(start, end, freq, columns)
 
-    df = create_table_between(start, end, freq, columns)
-    
+    assert isinstance(table, pa.Table), "Return type should be a PyArrow Table"
+
     expected_num_rows = len(pd.date_range(start=start, end=end, freq=freq))
-    assert len(df) == expected_num_rows, f"Expected {expected_num_rows} rows, but got {len(df)}"
+    assert table.num_rows == expected_num_rows, f"Expected {expected_num_rows} rows, but got {table.num_rows}"
 
-    assert df.shape[1] == columns, f"Expected {columns} columns, but got {df.shape[1]}"
-
-    assert pd.api.types.is_datetime64_any_dtype(df.index), "Index should be datetime"
+    assert table.num_columns - 1 == columns, f"Expected {columns} columns, but got {table.num_columns}"
 
     expected_columns = [f"Column {i+1}" for i in range(columns)]
-    assert list(df.columns) == expected_columns, f"Expected columns {expected_columns}, but got {list(df.columns)}"
+    expected_columns.insert(0, "TS")
+    
+    assert table.column_names == expected_columns, f"Expected columns {expected_columns}, but got {table.column_names}"
+
 
 @pytest.mark.parametrize(
     "num_tables, start, end",
@@ -40,18 +43,17 @@ def test_create_random_tables(num_tables, start, end):
 
     assert len(tables) == num_tables, f"Expected {num_tables} tables, got {len(tables)}"
 
-    for name, df in tables.items():
+    for name, table in tables.items():
         assert name.startswith("Table "), f"Table name '{name}' is not formatted correctly."
         
-        assert isinstance(df, pd.DataFrame), f"{name} is not a pandas DataFrame."
-        
-        assert len(df.columns) > 0, f"{name} has no columns."
-        
-        assert isinstance(df.index, pd.DatetimeIndex), f"{name} does not have a DateTime index."
-        
-        assert not df.empty, f"{name} is empty."
+        assert isinstance(table, pa.Table), f"{name} is not a PyArrow Table."
+
+        assert table.num_columns > 0, f"{name} has no columns."
+
+        assert table.num_rows > 0, f"{name} is empty."
+
 
 def test_empty_table_case():
     tables = create_random_tables(0, datetime(2022, 1, 1), datetime(2022, 1, 5))
- 
+
     assert tables == {}, "Expected an empty dictionary for 0 tables."

@@ -1,21 +1,24 @@
 import random
 import pandas as pd
+import pyarrow as pa
 import numpy as np
 from datetime import datetime
 from typing import Any, Dict
 
-def create_table_between(start: datetime, end: datetime, freq: str, columns: int) -> pd.DataFrame:
+def create_table_between(start: datetime, end: datetime, freq: str, columns: int) -> pa.Table:
     date_range = pd.date_range(start=start, end=end, freq=freq)
     
     data = np.random.randint(1, 100, size=(len(date_range), columns))
     
     column_names = [f"Column {i + 1}" for i in range(columns)]
     
-    df = pd.DataFrame(data, columns=column_names, index=date_range)
+    df = pd.DataFrame(data, columns=column_names)
     
-    return df
+    df.insert(0, "TS", date_range)
+    
+    return pa.Table.from_pandas(df)
 
-def create_random_tables(num_tables: int, start: datetime, end: datetime) -> Dict[str, pd.DataFrame]:
+def create_random_tables(num_tables: int, start: datetime, end: datetime) -> Dict[str, pa.Table]:
     
     res = dict()
     freq_options = ["D", "2D", "W", "h", "B"]
