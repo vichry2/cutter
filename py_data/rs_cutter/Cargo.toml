@@ -1,0 +1,15 @@
+[package]
+name = "rs_cutter"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+arrow = "54.3.0"
+chrono = "0.4.40"
+pyo3 = { version = "0.24", features = ["extension-module"] }
+pyo3-arrow = "0.8.0"
+
+[lib]
+name = "rs_cutter"
+crate-type = ["cdylib"]
+path = "src/lib.rs"

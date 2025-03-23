@@ -3,7 +3,7 @@ import pandas as pd
 import pyarrow as pa
 import numpy as np
 from datetime import datetime
-from typing import Any, Dict
+from typing import Dict
 
 def create_table_between(start: datetime, end: datetime, freq: str, columns: int) -> pa.Table:
     date_range = pd.date_range(start=start, end=end, freq=freq)
