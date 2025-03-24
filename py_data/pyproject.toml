@@ -24,11 +24,11 @@ pytest = "^8.3.5"
 mypy = "^1.15.0"
 
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.8,<2.0"]
 build-backend = "maturin"
 
 [tool.mypy]
 ignore_missing_imports = true
 
-[tool.maturin]
-cargo-manifest = "rs_cutter/Cargo.toml"
+[tool.poetry.scripts]
+build-rs = "build:build_rs"
