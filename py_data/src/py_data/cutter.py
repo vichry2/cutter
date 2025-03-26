@@ -32,13 +32,13 @@ class Cutter:
         # Convert start and end to np.datetime64 for comparison
         ts_sorted = df['TS'].values
         if start is not None:
-            start = np.datetime64(start)
+            start_np = np.datetime64(start)
         if end is not None:
-            end = np.datetime64(end)
+            end_np = np.datetime64(end)
 
         # Use np.searchsorted to find the appropriate indices for the start and end dates
-        start_idx = 0 if start is None else np.searchsorted(ts_sorted, start, side='left')
-        end_idx = len(ts_sorted) if end is None else np.searchsorted(ts_sorted, end, side='right')
+        start_idx = 0 if start is None else np.searchsorted(ts_sorted, start_np, side='left')
+        end_idx = len(ts_sorted) if end is None else np.searchsorted(ts_sorted, end_np, side='right')
 
         # Use pa.Table's slice method to slice the table
         length = end_idx - start_idx
