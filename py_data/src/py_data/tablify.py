@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Dict
 
 def create_table_between(start: datetime, end: datetime, freq: str, columns: int) -> pa.Table:
+        
     date_range = pd.date_range(start=start, end=end, freq=freq)
     
     data = np.random.randint(1, 100, size=(len(date_range), columns))
@@ -21,7 +22,7 @@ def create_table_between(start: datetime, end: datetime, freq: str, columns: int
 def create_random_tables(num_tables: int, start: datetime, end: datetime) -> Dict[str, pa.Table]:
     
     res = dict()
-    freq_options = ["D", "2D", "W", "h", "B"]
+    freq_options = ["D", "h", "B"]
     
     for i in range(num_tables):
         cols = random.randint(1, 50)

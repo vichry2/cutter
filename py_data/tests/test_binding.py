@@ -1,5 +1,5 @@
-from py_data import binding_tester
+from py_data.binding_tester import binding_tester
 
-def test_cutter():
+def test_binding():
     result = binding_tester()
     assert result == "TO_UPPER", f"Expected 'TO_UPPER', but got {result}"

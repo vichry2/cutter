@@ -1,4 +1,4 @@
-from py_data import create_random_tables, create_table_between
+from py_data.tablify import create_random_tables, create_table_between
 import pytest
 import pyarrow as pa
 import pandas as pd
