@@ -10,14 +10,14 @@ Prerequisites:
 Installation Steps:
 
 1. Navigate to the `py_data` directory:
-   cd py_data
+   `cd py_data`
 
 2. Install dependencies with Poetry:
    Poetry is used to manage the project's dependencies. To install them, run:
-   poetry install
+   `poetry install`
 
 3. Build the project using Poetry:
-   Once the dependencies are installed, you can build the project with the following command:
-   poetry run build-rs
+   Once the dependencies are installed, you can build the rust bindings with the following command:
+   `poetry run build-rs`
 
 This will trigger the build process for the project.
