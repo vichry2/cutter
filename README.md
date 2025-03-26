@@ -1,4 +1,3 @@
-Project Name
 
 Description:
 This project requires the use of Poetry for dependency management, Python 3.10+, and Rust to build. Follow the instructions below to set up and run the project.
