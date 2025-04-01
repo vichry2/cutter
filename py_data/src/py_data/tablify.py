@@ -30,3 +30,21 @@ def create_random_tables(num_tables: int, start: datetime, end: datetime) -> Dic
         res[f"Table {i + 1}"] = create_table_between(start, end, freq, cols)
         
     return res
+
+def create_single_table(num_rows: int, num_columns: int) -> Dict[str, pa.Table]:
+    freq = "min"
+    
+    start = datetime(2020, 1, 1)
+    
+    date_range = pd.date_range(start=start, periods=num_rows, freq=freq)
+    
+    data = np.random.randint(1, 100, size=(num_rows, num_columns))
+    
+    column_names = [f"Column {i + 1}" for i in range(num_columns)]
+    
+    df = pd.DataFrame(data, columns=column_names)
+    df.insert(0, "TS", date_range)
+    
+    table = pa.Table.from_pandas(df)
+    
+    return {"Table 1": table}

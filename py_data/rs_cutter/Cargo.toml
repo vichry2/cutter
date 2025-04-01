@@ -4,10 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-arrow = "54.3.0"
+arrow = {version = "54.3.0", features = ["pyarrow"]}
 chrono = "0.4.40"
-pyo3 = { version = "0.24", features = ["extension-module"] }
-pyo3-arrow = "0.8.0"
+pyo3 = { version = "^0.23.1", features = ["extension-module"] }
 
 [lib]
 name = "rs_cutter"
