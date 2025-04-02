@@ -7,6 +7,7 @@ edition = "2024"
 arrow = {version = "54.3.0", features = ["pyarrow"]}
 chrono = "0.4.40"
 pyo3 = { version = "^0.23.1", features = ["extension-module"] }
+thiserror = "2.0.12"
 
 [lib]
 name = "rs_cutter"
