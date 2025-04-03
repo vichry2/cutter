@@ -42,4 +42,4 @@ class Cutter:
 
         # Use pa.Table's slice method to slice the table
         length = end_idx - start_idx
-        return table.slice(offset=start_idx, length=length)
+        return table.slice(offset=start_idx, length=length-1)

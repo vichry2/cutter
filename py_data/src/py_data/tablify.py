@@ -31,10 +31,8 @@ def create_random_tables(num_tables: int, start: datetime, end: datetime) -> Dic
         
     return res
 
-def create_single_table(num_rows: int, num_columns: int) -> Dict[str, pa.Table]:
+def create_single_table(num_rows: int, num_columns: int, start: datetime = datetime(2020, 1, 1), table_name : str = "Table 1") -> Dict[str, pa.Table]:
     freq = "min"
-    
-    start = datetime(2020, 1, 1)
     
     date_range = pd.date_range(start=start, periods=num_rows, freq=freq)
     
@@ -47,4 +45,16 @@ def create_single_table(num_rows: int, num_columns: int) -> Dict[str, pa.Table]:
     
     table = pa.Table.from_pandas(df)
     
-    return {"Table 1": table}
+    return {table_name: table}
+
+def create_multiple_tables(num_tables: int, num_rows_per_table: int, num_columns_per_table: int, start: datetime = datetime(2020, 1, 1)) -> Dict[str, pa.Table]:
+    all_tables = {}
+
+    for i in range(num_tables):
+        table_name = f"Table {i+1}"
+
+        curr_table = create_single_table(num_rows_per_table, num_columns_per_table, start, table_name)
+
+        all_tables[table_name] = curr_table.get(table_name)
+
+    return all_tables

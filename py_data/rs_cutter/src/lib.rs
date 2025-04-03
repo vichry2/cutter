@@ -31,12 +31,9 @@ impl RsCutter {
     #[new]
     fn new(py: Python, tables: Py<PyDict>) -> PyResult<Self> {
         let mut rs_tables = HashMap::new();
-        println!("Starting to iterate over tables...");
 
         for (key, val) in tables.into_bound(py).iter() {
             let key_str = key.downcast::<PyString>()?.to_str()?.to_owned();
-
-            println!("Got the string {:?}", key_str);
 
             let mut reader = ArrowArrayStreamReader::from_pyarrow_bound(&val)?;
 
@@ -53,9 +50,6 @@ impl RsCutter {
                     }
                 }
             }
-
-            println!("Got the table");
-
             rs_tables.insert(key_str, table);
         }
 
@@ -252,7 +246,6 @@ impl RsCutter {
                 return Ok(mid_index);
             }
         }
-        println!("{:?}", start_index);
         // Return the index where the timestamp should be inserted or found
         Ok(start_index)
     }
