@@ -3,7 +3,6 @@ mod errors;
 use arrow::array::TimestampNanosecondArray;
 use arrow::datatypes::{ArrowTimestampType, TimestampNanosecondType};
 use arrow::pyarrow::FromPyArrow;
-use arrow::pyarrow::ToPyArrow;
 use arrow::{array::RecordBatch, ffi_stream::ArrowArrayStreamReader};
 use chrono::NaiveDate;
 use errors::MyError;
@@ -14,6 +13,7 @@ use pyo3::{
     prelude::*,
     types::{PyDict, PyString},
 };
+use pyo3_arrow::PyTable;
 
 /// This function takes a Python string, converts it to uppercase, and returns it.
 #[pyfunction]
@@ -62,15 +62,16 @@ impl RsCutter {
         Ok(RsCutter { tables: rs_tables })
     }
 
+    #[pyo3(signature = (start=None, end=None))]
     fn slice(
         &self,
         py: Python,
-        start_date: Py<PyDateTime>,
-        end_date: Py<PyDateTime>,
+        start: Option<Py<PyDateTime>>,
+        end: Option<Py<PyDateTime>>,
     ) -> PyResult<PyObject> {
-        let start_ts = RsCutter::parse_py_timestamps(py, start_date)
+        let start_ts = RsCutter::parse_py_timestamps(py, start)
             .map_err(|e: MyError| PyErr::new::<PyTypeError, _>(format!("{e}")))?;
-        let end_ts = RsCutter::parse_py_timestamps(py, end_date)
+        let end_ts = RsCutter::parse_py_timestamps(py, end)
             .map_err(|e: MyError| PyErr::new::<PyTypeError, _>(format!("{e}")))?;
 
         let mut sliced_tables = HashMap::new();
@@ -86,12 +87,11 @@ impl RsCutter {
             let py_value =
                 value.map_err(|e: MyError| PyErr::new::<PyTypeError, _>(format!("{e}")))?;
 
-            let py_vec: Vec<Py<PyAny>> = py_value
-                .iter()
-                .map(|batch| batch.to_pyarrow(py))
-                .collect::<Result<_, _>>()?;
+            let schema = py_value.get(0).unwrap().schema();
 
-            py_tables.set_item(key, py_vec)?;
+            let pa_table = PyTable::try_new(py_value, schema)?.to_pyarrow(py)?;
+
+            py_tables.set_item(key, pa_table)?;
         }
 
         let test = py_tables.into_py_any(py)?;
@@ -111,10 +111,16 @@ impl RsCutter {
 impl RsCutter {
     fn _slice(
         &self,
-        start: i64,
-        end: i64,
+        start: Option<i64>,
+        end: Option<i64>,
         rbs: &[RecordBatch],
     ) -> Result<Vec<RecordBatch>, MyError> {
+        if let (Some(start_val), Some(end_val)) = (start, end) {
+            if start_val > end_val {
+                return Ok(vec![RecordBatch::new_empty(rbs.get(0).unwrap().schema())]);
+            }
+        }
+
         let length = RsCutter::get_length(rbs);
 
         let schema = rbs
@@ -122,8 +128,15 @@ impl RsCutter {
             .ok_or(MyError::IndexError("No record batch found".to_string()))?
             .schema();
 
-        let start_slice = self.binary_search_ts(rbs, start, length)?;
-        let end_slice = self.binary_search_ts(rbs, end, length)?;
+        let start_slice = match start {
+            Some(s) => self.binary_search_ts(rbs, s, length)?,
+            None => 0, // If no start, include everything from the beginning
+        };
+
+        let end_slice = match end {
+            Some(e) => self.binary_search_ts(rbs, e, length)?,
+            None => length, // If no end, include everything until the last row
+        };
 
         if start_slice >= length || end_slice <= 0 {
             return Ok(vec![RecordBatch::new_empty(schema)]);
@@ -239,13 +252,19 @@ impl RsCutter {
                 return Ok(mid_index);
             }
         }
-
+        println!("{:?}", start_index);
         // Return the index where the timestamp should be inserted or found
         Ok(start_index)
     }
 
-    fn parse_py_timestamps(py: Python, ts: Py<PyDateTime>) -> Result<i64, MyError> {
-        let bounded_ts = ts.into_bound(py);
+    fn parse_py_timestamps(py: Python, ts: Option<Py<PyDateTime>>) -> Result<Option<i64>, MyError> {
+        if ts.is_none() {
+            return Ok(None);
+        }
+
+        let ts_some = ts.unwrap();
+
+        let bounded_ts = ts_some.into_bound(py);
 
         let year = bounded_ts.get_year();
         let month = bounded_ts.get_month();
@@ -264,7 +283,7 @@ impl RsCutter {
                 "Could not parse hour, minute, seconds, nano".to_string(),
             ))?;
 
-        Ok(TimestampNanosecondType::make_value(date).unwrap())
+        Ok(Some(TimestampNanosecondType::make_value(date).unwrap()))
     }
 }
 

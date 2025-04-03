@@ -10,7 +10,7 @@ def main():
 
     new_tables = cutter.slice(datetime(2022, 3, 1), datetime(2022, 4, 1))
 
-    print(new_tables)
+    print(type(new_tables.get("Table 1")))
 
 if __name__ == "__main__":
     main()
