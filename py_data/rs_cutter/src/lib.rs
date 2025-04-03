@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 mod errors;
 use arrow::array::TimestampNanosecondArray;
 use arrow::datatypes::{ArrowTimestampType, TimestampNanosecondType};
@@ -14,6 +15,7 @@ use pyo3::{
     types::{PyDict, PyString},
 };
 use pyo3_arrow::PyTable;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 /// This function takes a Python string, converts it to uppercase, and returns it.
 #[pyfunction]
@@ -56,28 +58,59 @@ impl RsCutter {
         Ok(RsCutter { tables: rs_tables })
     }
 
-    #[pyo3(signature = (start=None, end=None))]
+    #[pyo3(signature = (start=None, end=None, parralel=false))]
     fn slice(
         &self,
         py: Python,
         start: Option<Py<PyDateTime>>,
         end: Option<Py<PyDateTime>>,
+        parralel: bool,
     ) -> PyResult<PyObject> {
         let start_ts = RsCutter::parse_py_timestamps(py, start)
             .map_err(|e: MyError| PyErr::new::<PyTypeError, _>(format!("{e}")))?;
         let end_ts = RsCutter::parse_py_timestamps(py, end)
             .map_err(|e: MyError| PyErr::new::<PyTypeError, _>(format!("{e}")))?;
 
-        let mut sliced_tables = HashMap::new();
-
-        for (key, value) in self.tables.iter() {
-            let sliced_rbs = self._slice(start_ts, end_ts, value);
-            sliced_tables.insert(key, sliced_rbs);
-        }
+        // DROP GIL -- not really useful in my benchmark cause single threaded python program
+        let sliced_tables = py.allow_threads(move || {
+            let sliced_tables = Arc::new(Mutex::new(HashMap::new()));
+            if parralel {
+                self.tables.par_iter().for_each(|(key, val)| {
+                    let sliced_rbs = self._slice(start_ts, end_ts, val);
+                    let mut sliced_tables_lock = sliced_tables.lock().unwrap();
+                    sliced_tables_lock.insert(key.clone(), sliced_rbs);
+                });
+            } else {
+                for (key, value) in self.tables.iter() {
+                    let sliced_rbs = self._slice(start_ts, end_ts, value);
+                    sliced_tables
+                        .lock()
+                        .unwrap()
+                        .insert(key.clone(), sliced_rbs);
+                }
+            }
+            sliced_tables
+        });
 
         let py_tables = PyDict::new(py);
 
-        for (key, value) in sliced_tables.into_iter() {
+        // get rid of mutex and take sole ownership
+
+        let sliced_tables_no_arc = Arc::try_unwrap(sliced_tables).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Error un-Arc-ing hashmap: {:?}",
+                e
+            ))
+        })?;
+
+        let sliced_tables_no_mutex = sliced_tables_no_arc.into_inner().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Error un-Mutex-ing hashmap: {:?}",
+                e
+            ))
+        })?;
+
+        for (key, value) in sliced_tables_no_mutex.into_iter() {
             let py_value =
                 value.map_err(|e: MyError| PyErr::new::<PyTypeError, _>(format!("{e}")))?;
 

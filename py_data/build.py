@@ -22,7 +22,7 @@ def build_rs():
 
     # Run maturin develop with the correct environment
     result = subprocess.run(
-        ["maturin", "develop"],
+        ["maturin", "develop", "--release"],
         cwd=rs_cutter_path,
         check=True,
         env=env,

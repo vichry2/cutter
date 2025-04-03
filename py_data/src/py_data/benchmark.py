@@ -3,7 +3,7 @@ from functools import lru_cache
 import gc
 from time import perf_counter
 from py_data.cutter import Cutter
-from py_data.tablify import create_multiple_tables, create_random_tables, create_single_table
+from py_data.tablify import create_multiple_tables, create_single_table
 from py_data.utils import get_rss_memory
 from rs_cutter import RsCutter
 import matplotlib.pyplot as plt
@@ -18,12 +18,14 @@ def bench():
     construction_time_vs_rows()
     construction_time_with_lru_cache()
 
+# Takes 30+ seconds to run
 def slice_time_vs_number_of_tables():
-    number_of_tables = [1, 10, 25, 50, 100]
-    fixed_rows = 1000
+    number_of_tables = [10, 50, 100, 250, 500, 1000, 1500, 2000]
+    fixed_rows = 150_000
     fixed_columns = 10
     
     rs_times = []
+    rs_p_times = []
     py_times = []
 
     # Loop through different numbers of tables
@@ -32,14 +34,20 @@ def slice_time_vs_number_of_tables():
         tables = create_multiple_tables(num_tables, fixed_rows, fixed_columns, datetime(2022, 1, 1))
         
         # Time for Rust Slicer
-        start_rs = perf_counter()
         cutter_rs = RsCutter(tables)
+        start_rs = perf_counter()
         tbls_rs = cutter_rs.slice(datetime(2022, 1, 1, 0, 4), datetime(2022, 1, 1, 0, 30))
         end_rs = perf_counter()
         
+         # Time for Rust Slicer w/ Parralel
+        cutter_rs = RsCutter(tables)
+        start_rs_p = perf_counter()
+        tbls_rs = cutter_rs.slice(datetime(2022, 1, 1, 0, 4), datetime(2022, 1, 1, 0, 30), parralel=True)
+        end_rs_p = perf_counter()
+
         # Time for Python Slicer
-        start_py = perf_counter()
         cutter_py = Cutter(tables)
+        start_py = perf_counter()
         tbls_py = cutter_py.slice(datetime(2022, 1, 1, 0, 4), datetime(2022, 1, 1, 0, 30))
         end_py = perf_counter()
 
@@ -50,17 +58,33 @@ def slice_time_vs_number_of_tables():
 
         # Append the times for both slicers
         rs_times.append(end_rs - start_rs)
+        rs_p_times.append(end_rs_p - start_rs_p)
         py_times.append(end_py - start_py)
 
     # Plotting the slice times vs the number of tables
     plt.figure(figsize=(10, 6))
     plt.plot(number_of_tables, rs_times, label="Rust Cutter", marker='o', color='b')
     plt.plot(number_of_tables, py_times, label="Python Cutter", marker='o', color='r')
+    plt.plot(number_of_tables, rs_p_times, label="Rust Cutter Parralel", marker='o', color='y')
     
     # Adding labels and title
     plt.xlabel('Number of Tables')
     plt.ylabel('Slicing Time (seconds)')
     plt.title('Slicing Time vs Number of Tables (Rust vs Python)')
+    plt.legend()
+
+    # Show the plot
+    plt.show()
+
+    # Plotting the slice times vs the number of tables
+    plt.figure(figsize=(10, 6))
+    plt.plot(number_of_tables, rs_times, label="Rust Cutter", marker='o', color='b')
+    plt.plot(number_of_tables, rs_p_times, label="Rust Cutter Parralel", marker='o', color='y')
+    
+    # Adding labels and title
+    plt.xlabel('Number of Tables')
+    plt.ylabel('Slicing Time (seconds)')
+    plt.title('Slicing Time vs Number of Tables (Rust -- Parralel vs Non-parralel)')
     plt.legend()
 
     # Show the plot
@@ -248,8 +272,8 @@ def memory_size_vs_rows():
     plt.plot(row_counts, memory_counts, marker='o', color='g')
     plt.xscale('log')
     plt.xlabel('Number of Rows')
-    plt.ylabel('Memory Usage Difference (MB)')
-    plt.title('RSS Memory Usage Difference vs Table Size')
+    plt.ylabel('Memory Usage (MB)')
+    plt.title('RSS Memory Usage vs Table Size')
     plt.show()
 
 
